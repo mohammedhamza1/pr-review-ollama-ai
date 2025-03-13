@@ -18,6 +18,7 @@ The Ollama Code Review Action analyzes your pull request changes using Ollama's 
 - 📊 Summary statistics for each review session
 - 🔄 Deduplication of similar comments
 - 🎨 Beautiful, formatted PR comments with severity levels
+- 💬 Interactive conversations with AI in comment threads
 
 ## Installation
 
@@ -29,6 +30,8 @@ name: Code Review
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -37,6 +40,9 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@ollama'))
     steps:
       - uses: carofi-auto/ollama-code-review@v2
         with:
@@ -84,6 +90,13 @@ jobs:
    - Intelligent suggestions for improvements
    - Code quality insights
    - Best practices recommendations
+   - Interactive conversations - reply to comments to get further assistance!
+
+3. Conversation features:
+   - Reply to any review comment with questions or clarifications
+   - The AI will respond with helpful, contextual information
+   - Maintain context throughout the conversation thread
+   - Simply mention @ollama in a PR comment to start a new conversation
 
 ![Review Process](docs/images/comment-2.png)
 

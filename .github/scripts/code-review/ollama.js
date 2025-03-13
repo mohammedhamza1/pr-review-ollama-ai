@@ -126,6 +126,58 @@ If no issues found, return: []`;
       return [];
     }
   }
+
+  async generateCommentResponse(commentThread) {
+    // Extract the conversation history from the comment thread
+    const conversationHistory = commentThread.map((comment) => {
+      const isBot = comment.user.login.includes("github-actions");
+      return {
+        role: isBot ? "assistant" : "user",
+        content: comment.body,
+      };
+    });
+
+    // Get the original review comment (first comment in the thread)
+    const originalReview = commentThread[0];
+
+    // Extract code context from the original review
+    const codeContext = {
+      path: originalReview.path,
+      line: originalReview.line,
+      position: originalReview.position,
+    };
+
+    const prompt = `You are an AI code review assistant helping developers with their code. 
+
+You're currently in a conversation about code in the file ${
+      codeContext.path
+    } at line ${codeContext.line}.
+
+The conversation history is provided below. Your task is to respond helpfully to the latest message from the user, maintaining context from the entire conversation thread.
+
+Conversation history:
+${conversationHistory
+  .map((msg) => `${msg.role === "assistant" ? "AI" : "User"}: ${msg.content}`)
+  .join("\n\n")}
+
+Respond in a helpful, technical, and conversational manner. Provide specific code examples or explanations when appropriate. Be concise but thorough.`;
+
+    try {
+      const response = await this.makeRequest("/api/generate", {
+        model: this.model,
+        prompt,
+        stream: false,
+        temperature: 0.7, // Slightly higher temperature for more natural conversation
+        top_k: 40,
+        top_p: 0.9,
+      });
+
+      return response.response;
+    } catch (error) {
+      console.error("Error generating comment response:", error);
+      return "I apologize, but I encountered an error while processing your comment. Please try again or rephrase your question.";
+    }
+  }
 }
 
 module.exports = {

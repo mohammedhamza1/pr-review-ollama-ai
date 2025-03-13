@@ -38,6 +38,7 @@ runs:
     - name: Get changed files
       uses: tj-actions/changed-files@v42
       id: changed-files
+      if: github.event_name == 'pull_request'
 
     - name: Install Ollama
       shell: bash
@@ -60,13 +61,17 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
         GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
         GITHUB_REPOSITORY: ${{ github.repository }}
-        GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+        GITHUB_SHA: ${{ github.event.pull_request.head.sha || '' }}
         FILE_PATTERN: ${{ inputs.file-pattern }}
         BASE_BRANCH: ${{ inputs.base-branch }}
         CONCURRENCY_LIMIT: ${{ inputs.concurrency-limit }}
+        EVENT_NAME: ${{ github.event_name }}
+        COMMENT_ID: ${{ github.event.comment.id || '' }}
+        COMMENT_BODY: ${{ github.event.comment.body || '' }}
+        COMMENT_USER: ${{ github.event.comment.user.login || '' }}
       run: node ${{ github.action_path }}/.github/scripts/code-review/main.js
 
     - name: Cleanup

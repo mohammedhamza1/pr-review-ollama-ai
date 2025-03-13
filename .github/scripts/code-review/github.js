@@ -124,6 +124,66 @@ class GitHubAPI {
     const path = `/repos/${owner}/${repo}/pulls/${prNumber}/comments`;
     return this.makeRequest('GET', path);
   }
+
+  async getCommentById(owner, repo, commentId) {
+    const path = `/repos/${owner}/${repo}/pulls/comments/${commentId}`;
+    return this.makeRequest("GET", path);
+  }
+
+  async getIssueComment(owner, repo, commentId) {
+    const path = `/repos/${owner}/${repo}/issues/comments/${commentId}`;
+    return this.makeRequest("GET", path);
+  }
+
+  async replyToComment(owner, repo, prNumber, inReplyTo, body) {
+    const path = `/repos/${owner}/${repo}/pulls/${prNumber}/comments`;
+    return this.makeRequest("POST", path, {
+      body,
+      in_reply_to: inReplyTo,
+    });
+  }
+
+  async getCommentThread(owner, repo, commentId) {
+    // First get the comment to check if it's part of a thread
+    const comment = await this.getCommentById(owner, repo, commentId);
+
+    // If it has a reply_to_id, it's part of a thread
+    if (comment.in_reply_to_id) {
+      // Get the original comment
+      const originalComment = await this.getCommentById(
+        owner,
+        repo,
+        comment.in_reply_to_id
+      );
+
+      // Get all comments in the PR
+      const prNumber = comment.pull_request_url.split("/").pop();
+      const allComments = await this.getExistingComments(owner, repo, prNumber);
+
+      // Filter to get the thread (original + all replies)
+      const thread = allComments.filter(
+        (c) =>
+          c.id === originalComment.id ||
+          c.in_reply_to_id === originalComment.id ||
+          c.id === comment.id
+      );
+
+      return thread.sort(
+        (a, b) => new Date(a.created_at) - new Date(b.created_at)
+      );
+    }
+
+    // If this is the original comment, find all replies to it
+    const prNumber = comment.pull_request_url.split("/").pop();
+    const allComments = await this.getExistingComments(owner, repo, prNumber);
+    const thread = allComments.filter(
+      (c) => c.id === comment.id || c.in_reply_to_id === comment.id
+    );
+
+    return thread.sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    );
+  }
 }
 
 module.exports = {
